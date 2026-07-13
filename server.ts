@@ -32,6 +32,10 @@ import { setupSockets } from './src/sockets/index.ts';
 
 const startServer = async () => {
   const app = express();
+  
+  // Trust proxy for express-rate-limit in container environment
+  app.set('trust proxy', 1);
+
   const httpServer = createServer(app);
 
   // Initialize Socket.io with HTTP server
@@ -89,6 +93,9 @@ const startServer = async () => {
   // -------------------------------------------------------------
   // API ROUTES
   // -------------------------------------------------------------
+  app.get('/api/v1/health', (req, res) => {
+    res.json({ success: true, status: 'healthy' });
+  });
   app.use('/api/v1/auth', authRateLimiter, authRouter);
   app.use('/api/v1/tournaments', tournamentRouter);
   app.use('/api/v1/teams', teamRouter);
