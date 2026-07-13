@@ -1,0 +1,6 @@
+{
+  "name": "StadiumOS",
+  "description": "Smart Stadium & Tournament Operations Platform supporting matches, real-time score updates, live fan voting, and seat-side concessions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
