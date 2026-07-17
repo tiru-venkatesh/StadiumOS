@@ -20,7 +20,7 @@ export class TeamService {
 
   static async getTeams(tournamentId?: string): Promise<ITeam[]> {
     const filter = tournamentId ? { tournamentId } : {};
-    return await Team.find(filter).populate('players').populate('tournamentId');
+    return await Team.find(filter).populate('players').populate('tournamentId').lean() as unknown as ITeam[];
   }
 
   static async getTeamById(id: string): Promise<ITeam> {

@@ -4,7 +4,6 @@ import { Server as SocketServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,6 +13,7 @@ import { connectDatabase } from './src/config/db.ts';
 
 // Middlewares
 import { errorHandler } from './src/middleware/errorHandler.ts';
+import { authRateLimiter } from './src/middleware/rateLimiter.ts';
 
 // Routes
 import authRouter from './src/routes/auth.routes.ts';
@@ -77,18 +77,6 @@ const startServer = async () => {
 
   // Parse incoming JSON payloads
   app.use(express.json());
-
-  // Rate Limiting on Authentication endpoints to prevent brute-force attacks
-  const authRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per window
-    message: {
-      success: false,
-      message: 'Too many authentication attempts from this IP, please try again after 15 minutes.',
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
 
   // -------------------------------------------------------------
   // API ROUTES

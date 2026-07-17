@@ -53,4 +53,11 @@ router.patch(
   MatchController.updateScore
 );
 
+// AI features: Match tactical analysis and promotional chants
+router.get(
+  '/:id/ai-analysis',
+  authenticate,
+  MatchController.getAiAnalysis
+);
+
 export default router;

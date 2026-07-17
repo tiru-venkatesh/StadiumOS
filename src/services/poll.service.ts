@@ -64,7 +64,7 @@ export class PollService {
   }
 
   static async getPollsByMatch(matchId: string): Promise<IPoll[]> {
-    return await Poll.find({ matchId }).sort({ createdAt: -1 });
+    return await Poll.find({ matchId }).sort({ createdAt: -1 }).lean() as unknown as IPoll[];
   }
 
   static getResults(poll: IPoll): PollResults {

@@ -3,6 +3,7 @@ import { PollController, createPollSchema, votePollSchema } from '../controllers
 import { authenticate, requireRole } from '../middleware/auth.ts';
 import { validateBody } from '../middleware/validation.ts';
 import { UserRole } from '../constants/index.ts';
+import { writeRateLimiter } from '../middleware/rateLimiter.ts';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.get(
 router.post(
   '/:id/vote',
   authenticate,
+  writeRateLimiter,
   validateBody(votePollSchema),
   PollController.vote
 );

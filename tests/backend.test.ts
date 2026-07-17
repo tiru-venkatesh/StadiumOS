@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { startServer } from '../server.ts';
 import { UserRole } from '../src/constants/index.ts';
+import { AiService } from '../src/services/ai.service.ts';
 
 let mongoServer: MongoMemoryServer;
 let app: any;
@@ -220,6 +221,34 @@ describe(' StadiumOS Backend Test Suite', () => {
       createdMatchId = res.body.data._id;
     });
 
+    it('should allow a Fan to submit a match winner prediction while match is UPCOMING', async () => {
+      const res = await request(app)
+        .post('/api/v1/predictions')
+        .set('Authorization', fanToken)
+        .send({
+          matchId: createdMatchId,
+          predictedWinner: createdTeamAId,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.predictedWinner).toBe(createdTeamAId);
+    });
+
+    it('should allow a Fan to override / update their match winner prediction', async () => {
+      const res = await request(app)
+        .post('/api/v1/predictions')
+        .set('Authorization', fanToken)
+        .send({
+          matchId: createdMatchId,
+          predictedWinner: createdTeamBId,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.predictedWinner).toBe(createdTeamBId);
+    });
+
     it('should update live match scores', async () => {
       const res = await request(app)
         .patch(`/api/v1/matches/${createdMatchId}/score`)
@@ -236,6 +265,30 @@ describe(' StadiumOS Backend Test Suite', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.score.teamA).toBe(1);
       expect(res.body.data.status).toBe('live');
+    });
+
+    it('should retrieve AI match analysis successfully', async () => {
+      jest.spyOn(AiService, 'generateMatchAnalysis').mockImplementation(async () => {
+        return {
+          pregameCommentary: 'The ultimate matchup is here!',
+          keyTacticalInsights: ['Insight A', 'Insight B'],
+          winProbability: { teamA: 60, teamB: 40 },
+          projectedScore: { teamA: 99, teamB: 92 },
+          teamAChant: 'Go Team A!',
+          teamBChant: "Let's go Team B!",
+          playersToWatch: ['Harry Kane'],
+        };
+      });
+
+      const res = await request(app)
+        .get(`/api/v1/matches/${createdMatchId}/ai-analysis`)
+        .set('Authorization', fanToken);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.pregameCommentary).toBe('The ultimate matchup is here!');
+      expect(res.body.data.winProbability.teamA).toBe(60);
+      expect(res.body.data.teamAChant).toBe('Go Team A!');
     });
   });
 
@@ -282,6 +335,26 @@ describe(' StadiumOS Backend Test Suite', () => {
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toContain('already submitted a vote');
+    });
+  });
+
+  // -------------------------------------------------------------
+  // 6. CONCESSIONS INTEGRATION TESTS
+  // -------------------------------------------------------------
+  describe('Seat-Side Concessions Order', () => {
+    it('should allow a Fan to place a seat-side concessions order', async () => {
+      const res = await request(app)
+        .post('/api/v1/orders')
+        .set('Authorization', fanToken)
+        .send({
+          matchId: createdMatchId,
+          items: [{ name: 'Stadium Burger', quantity: 1, price: 12.99 }],
+          seatNumber: 'Section 102, Row C, Seat 12',
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.seatNumber).toBe('Section 102, Row C, Seat 12');
     });
   });
 });

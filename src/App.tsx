@@ -1,5 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { io, Socket } from 'socket.io-client';
+
+const OrganizerDashboard = lazy(() => import('./components/OrganizerDashboard.tsx'));
+const FanDashboard = lazy(() => import('./components/FanDashboard.tsx'));
+const TeamDashboard = lazy(() => import('./components/TeamDashboard.tsx'));
+const AiAnalysisView = lazy(() => import('./components/AiAnalysisView.tsx').then(m => ({ default: m.AiAnalysisView })));
 import {
   Activity,
   Trophy,
@@ -715,352 +720,81 @@ export default function App() {
                 </div>
               )}
 
-              {/* STEP 2: CREATE TOURNAMENT */}
-              {currentStep === 2 && (
-                <div className="flex flex-col h-full justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-amber-400" aria-hidden="true" /> Step 2: Establish Tournament Bracket
-                    </h3>
-                    <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-                      Now authenticated as <span className="text-blue-400 font-semibold">{registeredUser?.name} ({registeredUser?.role})</span>, launch a tournament. Standard route guards verify rights.
-                    </p>
-
-                    {registeredUser?.role !== 'organizer' ? (
-                      <div className="bg-rose-950/40 border border-rose-900/60 text-rose-200 p-4 rounded-xl text-xs flex gap-2">
-                        <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400" aria-hidden="true" />
-                        <div>
-                          <strong className="font-semibold text-rose-300 block mb-1">Role Restriction Denied</strong>
-                          <p className="text-rose-200/95 leading-relaxed">
-                            Your active user is a <strong>{registeredUser?.role}</strong>. Creating a tournament is strictly reserved for the <strong>organizer</strong> role. Test our security barrier below to observe the automatic 403 response!
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-                        <span className="text-xs font-semibold text-slate-200 block mb-1">Upcoming Tournament Draft:</span>
-                        <div className="font-mono text-[11px] text-slate-300 grid grid-cols-2 gap-2 mt-2">
-                          <div>🏆 Name: <span className="text-white">StadiumOS Super Cup</span></div>
-                          <div>🏀 Sport: <span className="text-white">Basketball</span></div>
-                          <div>📍 Venue: <span className="text-white">Staples Center Arena</span></div>
-                          <div>📅 Period: <span className="text-white">5 Days Span</span></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    {registeredUser?.role !== 'organizer' && (
-                      <button
-                        type="button"
-                        onClick={runStep2Tournament}
-                        data-testid="test-forbidden-btn"
-                        className="flex-1 h-11 bg-rose-600/25 hover:bg-rose-600/40 text-rose-200 border border-rose-900 font-medium rounded-xl text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
-                      >
-                        Launch (Trigger 403 Forbidden Access check)
-                      </button>
-                    )}
-                    {(registeredUser?.role === 'organizer' || tournament) && (
-                      <button
-                        type="button"
-                        onClick={runStep2Tournament}
-                        data-testid="create-tournament-btn"
-                        className="flex-1 h-11 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                      >
-                        Provision Tournament <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                      </button>
-                    )}
-                  </div>
+              {/* STEP OPERATIONS PORTAL */}
+              <Suspense fallback={
+                <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                  <span className="text-xs text-slate-400 font-mono">Loading operations dashboard...</span>
                 </div>
-              )}
-
-              {/* STEP 3: SCHEDULE MATCH & REGISTER TEAMS */}
-              {currentStep === 3 && (
-                <div className="flex flex-col h-full justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                      <Users className="w-4 h-4 text-emerald-400" aria-hidden="true" /> Step 3: Register Competitors & Schedule Match
-                    </h3>
-                    <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-                      Register teams into our database and arrange a match fixture under tournament ID: <span className="font-mono text-xs text-amber-400">{tournament?._id}</span>.
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
-                        <span className="text-[10px] text-slate-400 block uppercase font-mono tracking-wider">Home Competitor</span>
-                        <strong className="text-xs font-semibold text-white block mt-1">LA Lakers</strong>
-                      </div>
-                      <div className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-center">
-                        <span className="text-[10px] text-slate-400 block uppercase font-mono tracking-wider">Away Competitor</span>
-                        <strong className="text-xs font-semibold text-white block mt-1">Boston Celtics</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={runStep3Match}
-                    data-testid="register-match-btn"
-                    className="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                  >
-                    Register Rosters & Create Match <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-
-              {/* STEP 4: LIVE SCORING & FAN ENGAGEMENT POLL */}
-              {currentStep === 4 && (
-                <div className="flex flex-col h-full justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-rose-400 animate-pulse" aria-hidden="true" /> Step 4: Real-time Live Scores & Active Predictions
-                    </h3>
-                    <p className="text-xs text-slate-300 mb-4">
-                      The match is live! Fans can now place picks on predicted winners before scores update, or vote on active organizer polls.
-                    </p>
-
-                    {/* SCORE BOARD COMPONENT */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-                      <div className="flex justify-between items-center text-center">
-                        <div className="flex-1">
-                          <span className="text-xs text-slate-200 font-semibold">{teamA?.name || 'Home Team'}</span>
-                          <div className="flex items-center justify-center gap-2 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => setScoreA(Math.max(0, scoreA - 1))}
-                              aria-label={`Decrease score for ${teamA?.name || 'Home Team'}`}
-                              data-testid="score-a-dec"
-                              className="w-11 h-11 rounded-md bg-slate-950 text-slate-300 border border-slate-800 text-lg hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none flex items-center justify-center"
-                            >
-                              -
-                            </button>
-                            <span 
-                              className="text-2xl font-mono text-white font-bold px-2"
-                              aria-live="polite"
-                              aria-atomic="true"
-                              data-testid="score-a-value"
-                            >
-                              {scoreA}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setScoreA(scoreA + 1)}
-                              aria-label={`Increase score for ${teamA?.name || 'Home Team'}`}
-                              data-testid="score-a-inc"
-                              className="w-11 h-11 rounded-md bg-slate-950 text-slate-300 border border-slate-800 text-lg hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none flex items-center justify-center"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="px-4 border-r border-l border-slate-800" aria-live="polite">
-                          <span className="text-[10px] uppercase font-mono tracking-wider text-rose-400 font-bold block animate-pulse flex items-center gap-1 justify-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" aria-hidden="true" />
-                            LIVE
-                          </span>
-                          <span className="text-xs text-slate-400">Staples Center</span>
-                        </div>
-
-                        <div className="flex-1">
-                          <span className="text-xs text-slate-200 font-semibold">{teamB?.name || 'Away Team'}</span>
-                          <div className="flex items-center justify-center gap-2 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => setScoreB(Math.max(0, scoreB - 1))}
-                              aria-label={`Decrease score for ${teamB?.name || 'Away Team'}`}
-                              data-testid="score-b-dec"
-                              className="w-11 h-11 rounded-md bg-slate-950 text-slate-300 border border-slate-800 text-lg hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none flex items-center justify-center"
-                            >
-                              -
-                            </button>
-                            <span 
-                              className="text-2xl font-mono text-white font-bold px-2"
-                              aria-live="polite"
-                              aria-atomic="true"
-                              data-testid="score-b-value"
-                            >
-                              {scoreB}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setScoreB(scoreB + 1)}
-                              aria-label={`Increase score for ${teamB?.name || 'Away Team'}`}
-                              data-testid="score-b-inc"
-                              className="w-11 h-11 rounded-md bg-slate-950 text-slate-300 border border-slate-800 text-lg hover:text-white transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none flex items-center justify-center"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          type="button"
-                          onClick={updateMatchScore}
-                          data-testid="emit-score-btn"
-                          className="flex-1 h-11 rounded bg-slate-950 hover:bg-slate-900 border border-slate-800 text-blue-400 text-xs font-mono font-medium transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                        >
-                          Emit Score Change (Socket)
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* ACTIONS PANEL */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => submitPredictionPick(teamA?._id)}
-                        data-testid="predict-teama-btn"
-                        className="min-h-[44px] py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-left text-xs font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                      >
-                        🔮 Predict <span className="text-blue-400 font-semibold">{teamA?.name || 'LA Lakers'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => submitPredictionPick(teamB?._id)}
-                        data-testid="predict-teamb-btn"
-                        className="min-h-[44px] py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-left text-xs font-medium focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                      >
-                        🔮 Predict <span className="text-blue-400 font-semibold">{teamB?.name || 'Boston Celtics'}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={finishAndGradeMatch}
-                      data-testid="grade-predictions-btn"
-                      className="flex-1 h-11 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-900 rounded-xl text-xs font-semibold transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
-                    >
-                      Grade Predictions
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(5)}
-                      data-testid="nav-step5-btn"
-                      className="flex-1 h-11 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                    >
-                      Go to Concessions <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 5: SEAT-SIDE CONCESSIONS */}
-              {currentStep === 5 && (
-                <div className="flex flex-col h-full justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                      <ShoppingBag className="w-4 h-4 text-purple-400" aria-hidden="true" /> Step 5: Seat-Side Concessions ordering
-                    </h3>
-                    <p className="text-xs text-slate-300 mb-4 leading-relaxed">
-                      Place concessions orders directly to your seat. Status alterations automatically notify our isolated user subscription socket rooms.
-                    </p>
-
-                    <fieldset className="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-4">
-                      <legend className="text-xs font-semibold text-slate-200 px-2">Order Concessions Details</legend>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                        <div>
-                          <label htmlFor="concession-item-select" className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider mb-1">
-                            Concessions Menu <span className="text-rose-400" aria-hidden="true">*</span>:
-                          </label>
-                          <select
-                            id="concession-item-select"
-                            value={concessionItem}
-                            onChange={(e) => setConcessionItem(e.target.value)}
-                            required
-                            aria-required="true"
-                            data-testid="concessions-select"
-                            className="w-full h-11 bg-slate-950 border border-slate-800 px-3 rounded text-xs text-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                          >
-                            <option value="Stadium Burger & Fries">Stadium Burger & Fries ($14.99)</option>
-                            <option value="Sizzling Hot Dog">Sizzling Hot Dog ($6.50)</option>
-                            <option value="Large Cold Soda">Large Cold Soda ($6.50)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label htmlFor="seat-number-input" className="block text-[10px] text-slate-400 font-mono uppercase tracking-wider mb-1">
-                            Your Arena Seat <span className="text-rose-400" aria-hidden="true">*</span>:
-                          </label>
-                          <input
-                            type="text"
-                            id="seat-number-input"
-                            value={selectedSeat}
-                            onChange={(e) => setSelectedSeat(e.target.value)}
-                            required
-                            aria-required="true"
-                            aria-invalid={!!seatError}
-                            aria-describedby={seatError ? "seat-error-msg" : undefined}
-                            data-testid="seat-input"
-                            className={`w-full h-11 bg-slate-950 border px-3 rounded text-xs text-slate-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
-                              seatError ? 'border-rose-500 focus-visible:ring-rose-500' : 'border-slate-800'
-                            }`}
-                          />
-                          {seatError && (
-                            <div id="seat-error-msg" className="text-[11px] text-rose-400 mt-1 flex items-center gap-1 font-mono">
-                              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
-                              <span>{seatError}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </fieldset>
-
-                    {order && (
-                      <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs mb-4" aria-live="polite">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-slate-300">Order ID: <span className="font-mono text-[10px] text-white">{order._id.substr(-6)}</span></span>
-                          <span 
-                            data-testid="order-status-badge"
-                            className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
-                              order.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                              order.status === 'preparing' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                              'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            }`}
-                          >
-                            Status: {order.status}
-                          </span>
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => updateOrderStatus('preparing')}
-                            data-testid="set-preparing-btn"
-                            className="flex-1 h-11 rounded bg-slate-950 hover:bg-slate-850 border border-slate-800 text-[10px] text-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                          >
-                            Set Preparing
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateOrderStatus('delivered')}
-                            data-testid="set-delivered-btn"
-                            className="flex-1 h-11 rounded bg-slate-950 hover:bg-slate-850 border border-slate-800 text-[10px] text-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
-                          >
-                            Set Delivered
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={submitSeatOrder}
-                    disabled={!!seatError}
-                    data-testid="concessions-submit-btn"
-                    className="w-full h-11 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
-                  >
-                    Place Concessions Order
-                  </button>
-                </div>
-              )}
+              }>
+                {registeredUser?.role === 'organizer' && currentStep > 1 && (
+                  <OrganizerDashboard
+                    currentStep={currentStep}
+                    tournament={tournament}
+                    registeredUser={registeredUser}
+                    teamA={teamA}
+                    teamB={teamB}
+                    match={match}
+                    scoreA={scoreA}
+                    scoreB={scoreB}
+                    order={order}
+                    setScoreA={setScoreA}
+                    setScoreB={setScoreB}
+                    runStep2Tournament={runStep2Tournament}
+                    runStep3Match={runStep3Match}
+                    updateMatchScore={updateMatchScore}
+                    launchPoll={launchPoll}
+                    finishAndGradeMatch={finishAndGradeMatch}
+                    updateOrderStatus={updateOrderStatus}
+                    setCurrentStep={setCurrentStep}
+                  />
+                )}
+                {registeredUser?.role === 'fan' && currentStep > 1 && (
+                  <FanDashboard
+                    currentStep={currentStep}
+                    match={match}
+                    teamA={teamA}
+                    teamB={teamB}
+                    selectedSeat={selectedSeat}
+                    concessionItem={concessionItem}
+                    seatError={seatError}
+                    order={order}
+                    setSelectedSeat={setSelectedSeat}
+                    setConcessionItem={setConcessionItem}
+                    submitPredictionPick={submitPredictionPick}
+                    submitSeatOrder={submitSeatOrder}
+                  />
+                )}
+                {registeredUser?.role === 'team' && currentStep > 1 && (
+                  <TeamDashboard
+                    currentStep={currentStep}
+                    teamA={teamA}
+                    teamB={teamB}
+                    match={match}
+                    registeredUser={registeredUser}
+                  />
+                )}
+              </Suspense>
 
             </div>
           </div>
+
+          {match && (
+            <Suspense fallback={
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col items-center justify-center min-h-[150px]">
+                <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" aria-hidden="true" />
+                <span className="text-[11px] text-slate-400 font-mono">Initializing Gemini Analytics...</span>
+              </div>
+            }>
+              <AiAnalysisView
+                matchId={match._id}
+                token={registeredUser?.token || ''}
+                teamA={teamA}
+                teamB={teamB}
+                onLogEvent={addLog}
+              />
+            </Suspense>
+          )}
 
           {/* ACTIVE GAME POLLS & DEMOS PANEL */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

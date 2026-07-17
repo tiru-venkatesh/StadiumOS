@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service.ts';
 import { z } from 'zod';
+import { asyncHandler } from '../utils/asyncHandler.ts';
 
 export const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters long'),
@@ -18,46 +19,46 @@ export const refreshSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+/**
+ * Controller handles user registration, login and session refreshes.
+ */
 export class AuthController {
-  static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { name, email, password, role } = req.body;
-      const data = await AuthService.register(name, email, password, role);
-      res.status(201).json({
-        success: true,
-        message: 'Account registered successfully.',
-        data,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  /**
+   * Registers a new user account.
+   */
+  static register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { name, email, password, role } = req.body;
+    const data = await AuthService.register(name, email, password, role);
+    res.status(201).json({
+      success: true,
+      message: 'Account registered successfully.',
+      data,
+    });
+  });
 
-  static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { email, password } = req.body;
-      const data = await AuthService.login(email, password);
-      res.status(200).json({
-        success: true,
-        message: 'Logged in successfully.',
-        data,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  /**
+   * Logs in an existing user.
+   */
+  static login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { email, password } = req.body;
+    const data = await AuthService.login(email, password);
+    res.status(200).json({
+      success: true,
+      message: 'Logged in successfully.',
+      data,
+    });
+  });
 
-  static async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { refreshToken } = req.body;
-      const data = AuthService.refresh(refreshToken);
-      res.status(200).json({
-        success: true,
-        message: 'Tokens refreshed successfully.',
-        data,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  /**
+   * Refreshes JWT and refresh tokens using a valid refresh token.
+   */
+  static refresh = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const { refreshToken } = req.body;
+    const data = AuthService.refresh(refreshToken);
+    res.status(200).json({
+      success: true,
+      message: 'Tokens refreshed successfully.',
+      data,
+    });
+  });
 }

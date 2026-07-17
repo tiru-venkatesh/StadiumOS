@@ -3,6 +3,7 @@ import { OrderController, createOrderSchema, updateOrderStatusSchema, queryOrder
 import { authenticate, requireRole } from '../middleware/auth.ts';
 import { validateBody, validateQuery } from '../middleware/validation.ts';
 import { UserRole } from '../constants/index.ts';
+import { writeRateLimiter } from '../middleware/rateLimiter.ts';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.get(
 router.post(
   '/',
   authenticate,
+  writeRateLimiter,
   validateBody(createOrderSchema),
   OrderController.create
 );

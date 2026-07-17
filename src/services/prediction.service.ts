@@ -50,7 +50,7 @@ export class PredictionService {
   }
 
   static async getUserPredictions(userId: string): Promise<IPrediction[]> {
-    return await Prediction.find({ userId }).populate('matchId').populate('predictedWinner');
+    return await Prediction.find({ userId }).populate('matchId').populate('predictedWinner').lean() as unknown as IPrediction[];
   }
 
   static async getLeaderboard(limit: number = 10): Promise<any[]> {
@@ -113,24 +113,25 @@ export class PredictionService {
     // Fetch all unprocessed predictions for this match
     const predictions = await Prediction.find({ matchId, processed: false });
 
-    let gradedCount = 0;
-    for (const pred of predictions) {
-      let earnedPoints = 0;
-
-      if (actualWinner && pred.predictedWinner.equals(actualWinner)) {
-        earnedPoints = 100; // 100 points for correct winner prediction
-      } else if (!actualWinner) {
-        // Draw case: could optionally give partial points, let's keep it 0 or 50. Let's do 50 points if they predicted any and it's a draw,
-        // or 0 if they failed. Let's do 0 points if winner wasn't predicted correctly.
-        earnedPoints = 0;
-      }
-
-      pred.points = earnedPoints;
-      pred.processed = true;
-      await pred.save();
-      gradedCount++;
+    if (predictions.length === 0) {
+      return 0;
     }
 
-    return gradedCount;
+    // Parallelize Mongoose document updates to avoid sequential blocking IO (N+1 database saves)
+    await Promise.all(
+      predictions.map(async (pred) => {
+        let earnedPoints = 0;
+
+        if (actualWinner && pred.predictedWinner.equals(actualWinner)) {
+          earnedPoints = 100; // 100 points for correct winner prediction
+        }
+
+        pred.points = earnedPoints;
+        pred.processed = true;
+        await pred.save();
+      })
+    );
+
+    return predictions.length;
   }
 }

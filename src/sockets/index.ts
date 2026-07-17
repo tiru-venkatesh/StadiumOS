@@ -2,11 +2,16 @@ import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/environment.ts';
 import { DecodedUser } from '../middleware/auth.ts';
+import { SocketEvent } from '../constants/index.ts';
 
 interface CustomSocket extends Socket {
   user?: DecodedUser;
 }
 
+/**
+ * Initializes and binds Socket.io event listeners for real-time bidirection communication.
+ * Manages user personal rooms and tournament match live subscription rooms.
+ */
 export const setupSockets = (io: Server): void => {
   // Authentication middleware for Socket.io
   io.use((socket: CustomSocket, next) => {
@@ -28,7 +33,7 @@ export const setupSockets = (io: Server): void => {
     }
   });
 
-  io.on('connection', (socket: CustomSocket) => {
+  io.on(SocketEvent.CONNECTION, (socket: CustomSocket) => {
     const userEmail = socket.user?.email || 'Anonymous';
     const userId = socket.user?.id;
 
@@ -46,7 +51,7 @@ export const setupSockets = (io: Server): void => {
     }
 
     // Join match room to receive room-isolated score/poll updates
-    socket.on('match:join', (matchId: string) => {
+    socket.on(SocketEvent.MATCH_JOIN, (matchId: string) => {
       if (!matchId || typeof matchId !== 'string') return;
       
       const matchRoom = `match:${matchId}`;
@@ -56,11 +61,11 @@ export const setupSockets = (io: Server): void => {
         console.log(`🏀 Socket ${socket.id} joined match room ${matchRoom}`);
       }
       
-      socket.emit('match:joined', { matchId, message: `Successfully subscribed to match ${matchId} live updates.` });
+      socket.emit(SocketEvent.MATCH_JOINED, { matchId, message: `Successfully subscribed to match ${matchId} live updates.` });
     });
 
     // Leave match room
-    socket.on('match:leave', (matchId: string) => {
+    socket.on(SocketEvent.MATCH_LEAVE, (matchId: string) => {
       if (!matchId || typeof matchId !== 'string') return;
       
       const matchRoom = `match:${matchId}`;
@@ -70,10 +75,10 @@ export const setupSockets = (io: Server): void => {
         console.log(`🏀 Socket ${socket.id} left match room ${matchRoom}`);
       }
       
-      socket.emit('match:left', { matchId, message: `Successfully unsubscribed from match ${matchId} updates.` });
+      socket.emit(SocketEvent.MATCH_LEFT, { matchId, message: `Successfully unsubscribed from match ${matchId} updates.` });
     });
 
-    socket.on('disconnect', () => {
+    socket.on(SocketEvent.DISCONNECT, () => {
       if (process.env.NODE_ENV !== 'test') {
         console.log(`🔌 Client disconnected: ${socket.id}`);
       }
